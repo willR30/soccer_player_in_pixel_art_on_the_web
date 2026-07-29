@@ -1,0 +1,220 @@
+<!-- ============================================================
+     Futbolista Pixel Art - España
+     Pegar este bloque completo dentro de un widget "HTML"
+     de Elementor. Se posiciona fijo abajo, en la esquina
+     izquierda o derecha de la pantalla (elegida al azar
+     cada vez que carga la página) y flota sobre el contenido.
+     ============================================================ -->
+<div id="pixel-futbolista-wrap"></div>
+
+<style>
+  #pixel-futbolista-wrap {
+    position: fixed;
+    bottom: 0;
+    z-index: 9999;
+    pointer-events: none; /* no bloquea clics en el contenido de la web */
+  }
+  #pixel-futbolista-wrap canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: transparent;
+  }
+</style>
+
+<script>
+(function () {
+  // ---------- Config rápida ----------
+  var SCALE = 3;          // tamaño final del sprite (subí/bajá para agrandar o achicar)
+  var MARGIN = 12;         // separación del borde de la pantalla en px
+  var BOTTOM_OFFSET = 0;   // separación respecto al piso de la pantalla en px
+
+  var OFF_W = 48;
+  var OFF_H = 55;
+
+  // ---------- Crear canvas dentro del wrapper ----------
+  var wrap = document.getElementById('pixel-futbolista-wrap');
+
+  // Elegir aleatoriamente izquierda o derecha
+  var side = Math.random() < 0.5 ? 'left' : 'right';
+  wrap.style[side] = MARGIN + 'px';
+  wrap.style.bottom = BOTTOM_OFFSET + 'px';
+
+  var display = document.createElement('canvas');
+  display.width = OFF_W * SCALE;
+  display.height = OFF_H * SCALE;
+  wrap.appendChild(display);
+
+  var dctx = display.getContext('2d');
+  dctx.imageSmoothingEnabled = false;
+
+  // canvas interno de baja resolucion donde se dibuja el pixel art real
+  var off = document.createElement('canvas');
+  off.width = OFF_W;
+  off.height = OFF_H;
+  var ctx = off.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // ---------- Paleta uniforme España ----------
+  var C = {
+    hair:   '#241609',
+    skin:   '#e8b48c',
+    skinSh: '#cf9a70',
+    red:    '#c60b1e',
+    redSh:  '#9c0916',
+    gold:   '#ffcc00',
+    navy:   '#1b1464',
+    sock:   '#f4f4f4',
+    sockSh: '#d6d6d6',
+    boot:   '#111111',
+    bootSole:'#e0e0e0',
+    ballW:  '#ffffff',
+    ballLine:'#111111',
+    shadow: 'rgba(0,0,0,0.28)'
+  };
+
+  // ---------- geometria base ----------
+  var HX = 16;
+  var HIP_Y = 27;
+  var TORSO_TOP = 15;
+  var TORSO_H = 12;
+  var TORSO_W = 20;
+  var TORSO_X = HX - 8;
+  var GROUND_Y = 49;
+
+  var LEG_W = 6;
+  var BOOT_LEN = 4;
+  var ARM_W = 4;
+
+  function r(x,y,w,h,color){
+    ctx.fillStyle = color;
+    ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+  }
+
+  function drawLeg(pivotX, pivotY, angle){
+    ctx.save();
+    ctx.translate(pivotX, pivotY);
+    ctx.rotate(angle);
+    ctx.fillStyle = C.navy;
+    ctx.fillRect(-LEG_W/2, 0, LEG_W, 7);
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(-LEG_W/2, 7, LEG_W, 2);
+    ctx.fillStyle = C.sock;
+    ctx.fillRect(-LEG_W/2, 9, LEG_W, 9);
+    ctx.fillStyle = C.sockSh;
+    ctx.fillRect(-LEG_W/2, 15, LEG_W, 3);
+    ctx.fillStyle = C.boot;
+    ctx.fillRect(-LEG_W/2 - 1, 18, LEG_W + 8, BOOT_LEN);
+    ctx.fillStyle = C.bootSole;
+    ctx.fillRect(-LEG_W/2 - 1, 18 + BOOT_LEN - 1, LEG_W + 8, 1);
+    ctx.restore();
+  }
+
+  function drawArm(pivotX, pivotY, angle){
+    ctx.save();
+    ctx.translate(pivotX, pivotY);
+    ctx.rotate(angle);
+    ctx.fillStyle = C.red;
+    ctx.fillRect(-ARM_W/2, 0, ARM_W, 6);
+    ctx.fillStyle = C.gold;
+    ctx.fillRect(-ARM_W/2, 6, ARM_W, 1);
+    ctx.fillStyle = C.skin;
+    ctx.fillRect(-ARM_W/2, 7, ARM_W, 6);
+    ctx.restore();
+  }
+
+  function drawTorsoAndHead(dy){
+    ctx.save();
+    ctx.translate(0, dy);
+    r(TORSO_X, TORSO_TOP, TORSO_W, TORSO_H, C.red);
+    r(TORSO_X, TORSO_TOP, 6, TORSO_H, C.redSh);
+    r(HX - 2, TORSO_TOP, 6, 2, C.gold);
+    r(TORSO_X, TORSO_TOP + TORSO_H - 2, TORSO_W, 2, C.gold);
+    r(HX - 2, TORSO_TOP - 2, 4, 3, C.skin);
+    r(HX - 6, 2, 12, 5, C.hair);
+    r(HX - 5, 4, 9, 9, C.skin);
+    r(HX - 6, 4, 3, 7, C.hair);
+    r(HX + 2, 7, 2, 2, '#1a1a1a');
+    r(HX - 5, 9, 4, 2, C.skinSh);
+    ctx.restore();
+  }
+
+  function drawBall(x, y){
+    var radius = 4.2;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI*2);
+    ctx.fillStyle = C.ballW;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = C.ballLine;
+    ctx.stroke();
+    ctx.fillStyle = C.ballLine;
+    ctx.beginPath(); ctx.arc(x, y - 1.5, 1.1, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - 2.2, y + 1.4, 1.0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 2.2, y + 1.4, 1.0, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawShadow(x, y, scale){
+    ctx.fillStyle = C.shadow;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 6*scale, 1.6*scale, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // ---------- loop de animacion ----------
+  var STRIDE_FREQ = 0.9;
+  var W = 2 * Math.PI * STRIDE_FREQ;
+  var AMP_LEG = 0.55;
+  var AMP_ARM = 0.4;
+  var BALL_A = 15;
+  var BALL_BASE_X = HX + 23;
+
+  var startTime = performance.now();
+  var rafId;
+
+  function frame(now){
+    var t = (now - startTime) / 1000;
+
+    ctx.clearRect(0, 0, OFF_W, OFF_H);
+
+    var legBackAngle  =  AMP_LEG * Math.sin(W * t);
+    var legFrontAngle = -AMP_LEG * Math.sin(W * t);
+    var armBackAngle  = -AMP_ARM * Math.sin(W * t);
+    var armFrontAngle =  AMP_ARM * Math.sin(W * t);
+
+    var ballHeight = BALL_A * Math.abs(Math.sin(W * t));
+    var ballX = BALL_BASE_X + 3 * Math.sin(W * t);
+    var ballY = GROUND_Y - ballHeight - 2;
+
+    var bodyBob = -2 * Math.abs(Math.sin(W * t));
+    var ballShadowScale = 1 - (ballHeight / BALL_A) * 0.6;
+
+    drawShadow(HX + 2, GROUND_Y + 1, 1);
+    drawShadow(ballX, GROUND_Y + 1, ballShadowScale * 0.6);
+
+    drawLeg(HX - 2, HIP_Y, legBackAngle);
+    drawTorsoAndHead(bodyBob);
+    drawArm(11, 17 + bodyBob, armBackAngle);
+    drawArm(27, 17 + bodyBob, armFrontAngle);
+    drawLeg(HX + 6, HIP_Y, legFrontAngle);
+    drawBall(ballX, ballY);
+
+    dctx.clearRect(0, 0, display.width, display.height);
+    dctx.drawImage(off, 0, 0, display.width, display.height);
+
+    rafId = requestAnimationFrame(frame);
+  }
+
+  rafId = requestAnimationFrame(frame);
+
+  // Pausar la animación cuando la pestaña no está visible (ahorra CPU)
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      cancelAnimationFrame(rafId);
+    } else {
+      startTime = performance.now() - (startTime ? 0 : 0);
+      rafId = requestAnimationFrame(frame);
+    }
+  });
+})();
+</script>
